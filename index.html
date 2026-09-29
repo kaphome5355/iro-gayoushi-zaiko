@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>色画用紙の在庫</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&family=BIZ+UDPGothic:wght@400;700&display=swap">
+<style>
+/* Layout: 画材室の棚を思わせる「色見本カード」の一覧。上に要約、下にカードの格子。 */
+:root{
+  --bg:#F3F5F4; --surface:#FFFFFF; --fg:#1F2A2E; --muted:#5E6B70; --line:#DCE2E1;
+  --accent:#2B4C7E; --accent-soft:#E3EAF4; --warn:#B7791F; --warn-soft:#FBF0DC;
+  --crit:#C0392B; --crit-soft:#FBE4E1; --ok:#2F7D4F;
+  --display:"Zen Maru Gothic","Hiragino Maru Gothic ProN","BIZ UDPGothic",sans-serif;
+  --body:"BIZ UDPGothic","Hiragino Sans","Yu Gothic",Meiryo,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151A1C; --surface:#1E2427; --fg:#E7ECEC; --muted:#9AA7AB; --line:#313A3E;
+  --accent:#8FB0E0; --accent-soft:#243246; --warn:#E3B25A; --warn-soft:#3A2F1B;
+  --crit:#F08A7D; --crit-soft:#3D2220; --ok:#7CC79A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151A1C; --surface:#1E2427; --fg:#E7ECEC; --muted:#9AA7AB; --line:#313A3E;
+  --accent:#8FB0E0; --accent-soft:#243246; --warn:#E3B25A; --warn-soft:#3A2F1B;
+  --crit:#F08A7D; --crit-soft:#3D2220; --ok:#7CC79A; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:20px 60px}
+h1{font-family:var(--display);font-weight:700;font-size:1.7rem;margin:0;text-wrap:balance;letter-spacing:.02em}
+.sub{color:var(--muted);font-size:.85rem;margin:.2rem 0 0}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.stats{display:flex;flex-wrap:wrap;gap:8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 14px;min-width:96px}
+.stat b{display:block;font-family:var(--display);font-size:1.35rem;font-variant-numeric:tabular-nums;line-height:1.3}
+.stat span{font-size:.75rem;color:var(--muted)}
+.stat.crit b{color:var(--crit)}
+.notice{margin-top:14px;padding:10px 14px;border-radius:10px;background:var(--accent-soft);font-size:.85rem}
+.notice.ro{background:var(--warn-soft)}
+nav.tabs{display:flex;gap:4px;margin-top:18px;border-bottom:1px solid var(--line)}
+nav.tabs button{font:inherit;font-weight:700;background:none;border:0;padding:10px 16px;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer}
+nav.tabs button[aria-selected="true"]{color:var(--accent);border-color:var(--accent)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-block:14px}
+input[type=search],input[type=number],select{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+input[type=search]{flex:1 1 180px;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:inherit;font-size:.82rem;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:4px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.btn{font:inherit;font-weight:700;border:1px solid var(--accent);background:var(--accent);color:var(--surface);border-radius:8px;padding:7px 14px;cursor:pointer}
+.btn.ghost{background:var(--surface);color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h2.group{font-family:var(--display);font-size:1rem;margin:22px 0 8px;display:flex;gap:8px;align-items:baseline}
+h2.group small{font-family:var(--body);font-weight:400;color:var(--muted);font-size:.78rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;display:grid;grid-template-columns:44px 1fr;overflow:hidden}
+.card.low{border-color:var(--warn)}
+.card.zero{border-color:var(--crit)}
+.sw{border-right:1px solid var(--line)}
+.cb{padding:8px 10px;display:grid;gap:6px;min-width:0}
+.top{display:flex;justify-content:space-between;gap:6px;align-items:baseline}
+.nm{font-weight:700;overflow-wrap:anywhere}
+.code{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.cud{font-size:.68rem;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:0 4px;margin-left:4px}
+.qty{display:flex;align-items:baseline;gap:6px}
+.qty b{font-family:var(--display);font-size:1.45rem;font-variant-numeric:tabular-nums}
+.qty .unit{font-size:.78rem;color:var(--muted)}
+.pill{font-size:.7rem;font-weight:700;border-radius:999px;padding:1px 8px;margin-left:auto;white-space:nowrap}
+.pill.low{background:var(--warn-soft);color:var(--warn)}
+.pill.zero{background:var(--crit-soft);color:var(--crit)}
+.pill.off{background:var(--bg);color:var(--muted);font-weight:400}
+.card.offc .nm,.card.offc .qty b{color:var(--muted)}
+.del{font:inherit;font-size:.75rem;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:6px;padding:1px 8px;cursor:pointer}
+.del.sure{border-color:var(--crit);color:var(--crit);font-weight:700}
+.step{display:flex;gap:4px;flex-wrap:wrap}
+.step button{font:inherit;font-size:.8rem;font-variant-numeric:tabular-nums;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:6px;padding:3px 0;flex:1 1 0;min-width:40px;cursor:pointer}
+.step button.plus{color:var(--ok)}
+.step button.more{flex:0 0 auto;padding-inline:8px;color:var(--muted)}
+.step input{width:100%}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:.75rem;color:var(--muted);font-weight:700}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl{overflow-x:auto}
+.dot{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid var(--line);vertical-align:-2px;margin-right:6px}
+.empty{color:var(--muted);padding:18px 4px}
+textarea{width:100%;font:inherit;font-size:.85rem;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:120px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.dlg{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.dlg .panel{width:min(440px,100%);max-height:90vh;overflow:auto;display:grid;gap:12px}
+.dlg h3{margin:0;font-family:var(--display);display:flex;align-items:center;gap:8px}
+label.f{display:grid;gap:4px;font-size:.82rem;color:var(--muted)}
+.hint{font-size:.78rem;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 16px;border-radius:8px;font-size:.85rem;z-index:20}
+.cols2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>色画用紙の在庫</h1>
+      <p class="sub">大王製紙 再生色画用紙フレッシュカラー 4ツ切（392×543mm）・100枚入り　全65色＋金・銀・銅</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+  <div id="notice" class="notice" hidden></div>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-stock" aria-selected="true" data-tab="stock">在庫</button>
+    <button role="tab" id="tab-order" aria-selected="false" data-tab="order">発注リスト</button>
+    <button role="tab" id="tab-log" aria-selected="false" data-tab="log">使用の記録</button>
+  </nav>
+
+  <section id="view-stock">
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="色名・品番でさがす（例：みずいろ、B-29）">
+      <select id="filter" aria-label="表示の絞り込み">
+        <option value="all">すべての色</option>
+        <option value="low">少ない・なしだけ</option>
+        <option value="has">在庫がある色だけ</option>
+        <option value="reg">常設の色だけ</option>
+        <option value="cud">CUD認証色だけ</option>
+      </select>
+      <button class="btn ghost" id="bulkBtn">棚卸し（まとめて入力）</button>
+    </div>
+    <div class="chips" id="groupChips"></div>
+    <div id="bulkBar" class="notice" hidden>
+      <div class="row"><span>棚にある枚数をそのまま入力してください。<b>1袋＝100枚</b>です。入力が終わったら保存を押します。</span>
+      <span style="margin-left:auto" class="row"><button class="btn ghost" id="bulkCancel">やめる</button><button class="btn" id="bulkSave">まとめて保存</button></span></div>
+    </div>
+    <div id="groups"></div>
+  </section>
+
+  <section id="view-order" hidden>
+    <div class="cols2" style="margin-top:14px">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between"><b>補充が必要な色</b><span class="hint">在庫が「発注の目安」以下の色</span></div>
+        <div class="tbl"><table><thead><tr><th>色</th><th class="num">いまの枚数</th><th class="num">目安</th><th class="num">注文する袋</th></tr></thead><tbody id="orderBody"></tbody></table></div>
+      </div>
+      <div class="panel" style="display:grid;gap:10px;align-content:start">
+        <b>注文用メモ</b>
+        <textarea id="orderText" readonly aria-label="注文用メモ"></textarea>
+        <div class="row"><button class="btn" id="copyOrder">メモをコピー</button><span class="hint">事務室への依頼や注文書にはり付けて使えます。</span></div>
+        <span class="hint">色ごとの「発注の目安」は、在庫カードの「…」から変えられます。0にすると常設外になります。</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-log" hidden>
+    <div class="toolbar"><label class="row" for="month">月 <select id="month"></select></label></div>
+    <div class="cols2">
+      <div class="panel"><b>この月によく使った色</b><div class="tbl"><table><thead><tr><th>色</th><th class="num">使った枚数</th></tr></thead><tbody id="rankBody"></tbody></table></div></div>
+      <div class="panel"><b>出し入れの記録</b><div class="tbl"><table><thead><tr><th>日時</th><th>色</th><th class="num">増減</th><th class="num">残り</th><th></th></tr></thead><tbody id="logBody"></tbody></table></div>
+        <p class="hint">まちがえて押したときは「取り消す」を押すと、記録が消えて在庫の数も元にもどります。「数を直した」記録は、使った枚数には数えません。</p></div>
+    </div>
+  </section>
+</div>
+
+<div class="dlg" id="dlg" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+    <h3 id="dlgTitle"></h3>
+    <label class="f">いまの枚数（棚で数えた数に直す）<input type="number" id="dlgN" min="0" step="1"></label>
+    <label class="f">この色の発注の目安（枚）　0＝常設しない色<input type="number" id="dlgMin" min="0" step="10"></label>
+    <div class="row" style="justify-content:flex-end"><button class="btn ghost" id="dlgCancel">閉じる</button><button class="btn" id="dlgSave">保存</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+// ===== データの置き場所（Supabase） =====
+// この鍵は「公開してよい鍵」です。データの書きかえは、決められた3つの操作（増減・数を直す・取り消し）だけに限っています。
+const SB_URL = "https://vdexlumqbgtbzerbpjrm.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkZXhsdW1xYmd0YnplcmJwanJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MTA1MzAsImV4cCI6MjEwNjI4NjUzMH0.UsBx4lh1vI1OP-VBDoHmBmwdIpsV4EA39XM_r5e5nd0";
+async function api(path, opts={}){
+  const res = await fetch(SB_URL + "/rest/v1/" + path, {
+    ...opts,
+    headers: {apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, "Content-Type": "application/json", ...(opts.headers||{})}
+  });
+  if(!res.ok){ const t = await res.text().catch(()=> ""); throw new Error(res.status + " " + t); }
+  const txt = await res.text(); return txt ? JSON.parse(txt) : null;
+}
+const rpc = (fn, args) => api("rpc/" + fn, {method:"POST", body: JSON.stringify(args)});
+
+// ===== 色の一覧 =====
+const COLORS = [
+["A-49","ゆき","白色系","#FAFAF7",1],["A-50","ミルク","白色系","#F4EFE2",0],
+["A-01","うすクリーム","黄色系","#FBF4D8",0],["A-02","クリーム","黄色系","#F8EDB8",0],["A-69","バナナ","黄色系","#F7E37E",0],["A-04","きいろ","黄色系","#F7DC3A",0],["C-05","レモン","黄色系","#F4E500",1],["C-66","ひよこ","黄色系","#F6D23C",0],["C-06","ひまわり","黄色系","#F5B800",0],
+["A-07","みかん","オレンジ色系","#F7B64E",0],["C-08","オレンジ","オレンジ色系","#F29A2E",1],["B-65","かき","オレンジ色系","#EE8434",0],["B-09","だいだい","オレンジ色系","#EB7428",0],["B-10","しゅいろ","オレンジ色系","#E4502B",0],
+["C-56","いちご（あかるいあか）","赤色系","#E8383D",1],["C-21","あか","赤色系","#D7282F",0],["C-67","きんぎょ（こいあか）","赤色系","#C8232C",0],["C-22","えんじ","赤色系","#9E2536",0],
+["A-59","うさぎ","ピンク色系","#F8E4E6",0],["A-14","ピンク","ピンク色系","#F6C9D0",0],["A-63","サーモン","ピンク色系","#F4A897",0],["A-15","うすもも","ピンク色系","#F7B9C8",1],["B-16","さくら","ピンク色系","#F2A7BC",0],["B-60","ピーチ","ピンク色系","#F6B39E",0],["B-18","もも","ピンク色系","#EE8FAA",0],["C-64","フラミンゴ","ピンク色系","#EC7F93",0],["C-19","こいもも","ピンク色系","#E0507F",0],
+["B-23","ふじむらさき","紫色系","#B9A5D6",0],["B-24","あかむらさき","紫色系","#B0428F",1],["C-71","ぶどう","紫色系","#6B3E86",0],["C-25","むらさき","紫色系","#6F4A9E",0],["B-26","ぐんじょう","紫色系","#3547A0",0],["C-27","あいいろ","紫色系","#243A6B",1],
+["A-70","ぞう","青色系","#B6C3CF",0],["A-28","うすみずいろ","青色系","#D3EAF4",0],["B-29","みずいろ","青色系","#8FCFEA",1],["C-31","あさぎ","青色系","#3FB0C9",0],["B-32","そら","青色系","#6FB3E0",0],["B-61","イルカ","青色系","#6E96B8",0],["B-33","うすあお","青色系","#8AA8DA",0],["B-34","あお","青色系","#2A6FC0",1],
+["A-36","やなぎ","緑色系","#D5E2A8",0],["B-35","わかくさ","緑色系","#C8DC8A",0],["B-37","うすみどり","緑色系","#B7DDB0",0],["B-68","マスカット","緑色系","#A9D48A",0],["B-38","きみどり","緑色系","#8CC63F",1],["B-39","こいきみどり","緑色系","#5FAE3A",0],["C-40","みどり","緑色系","#2E9A4E",1],["C-41","エメラルド","緑色系","#1E9C84",0],["C-48","オリーブ","緑色系","#7D7A3A",0],
+["A-72","うすだいだい","茶色系","#F8D3B0",0],["A-42","しらちゃ","茶色系","#E5CFAE",0],["B-43","うすちゃ","茶色系","#C9A27A",0],["B-12","おうどいろ","茶色系","#C8962E",0],["B-47","くちばいろ","茶色系","#B5824A",0],["B-44","ちゃいろ","茶色系","#9A6A3F",0],["B-62","くり","茶色系","#7A3E2A",0],["B-45","こげちゃ","茶色系","#6B4428",0],["C-46","こいこげちゃ","茶色系","#4A2E1D",0],
+["A-51","うすはいいろ","黒色系","#DCDCDA",0],["B-52","あかるいはいいろ","黒色系","#C2C2C0",0],["A-53","はいいろ","黒色系","#9C9C9A",0],["B-54","くらいはいいろ","黒色系","#6E6E6C",0],["C-55","くろ","黒色系","#1E1E1E",1],["C-57","くま（こいくろ）","黒色系","#2B2522",0],
+["KIN","金","金・銀・銅","#C9A646",0],["GIN","銀","金・銀・銅","#B8BCC2",0],["DOU","銅","金・銀・銅","#B2703F",0]
+].map(([code,name,group,hex,cud])=>({code,name,group,hex,cud:!!cud}));
+const BY = Object.fromEntries(COLORS.map(c=>[c.code,c]));
+const GROUPS = [...new Set(COLORS.map(c=>c.group))];
+
+const S = {stock:{}, logs:[], tab:"stock", group:"すべて", q:"", filter:"all", bulk:false,
+  ready:false, error:false, month:ym(new Date()), confirmDel:null, busy:0};
+const $ = id=>document.getElementById(id);
+function ym(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")}
+function esc(s){return String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]))}
+const n = code => (S.stock[code]?.n) || 0;
+const minOf = code => S.stock[code]?.min || 0;
+const regular = code => minOf(code) > 0;
+function status(code){if(!regular(code)) return ""; const v=n(code); if(v===0) return "zero"; if(v<=minOf(code)) return "low"; return ""}
+function toast(msg){const t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,2400)}
+function fmt(d){d=new Date(d); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`}
+
+/* ---------- 読み込み ---------- */
+async function loadStock(){
+  const rows = await api("stock?select=code,n,min,updated_at");
+  const o={}; rows.forEach(r=>o[r.code]=r); S.stock=o; S.ready=true; S.error=false;
+}
+async function loadLogs(){
+  const [y,m]=S.month.split("-").map(Number);
+  const from=new Date(y,m-1,1).toISOString(), to=new Date(y,m,1).toISOString();
+  S.logs = await api(`logs?select=id,t,code,d,a,k&t=gte.${encodeURIComponent(from)}&t=lt.${encodeURIComponent(to)}&order=t.desc&limit=1000`);
+}
+async function refresh(){
+  if(S.busy || S.bulk || !$("dlg").hidden) return;
+  try{ await loadStock(); if(S.tab==="log") await loadLogs(); }
+  catch(e){ S.error=true; }
+  render();
+}
+
+/* ---------- 画面 ---------- */
+function renderStats(){
+  const total = COLORS.reduce((a,c)=>a+n(c.code),0);
+  const has = COLORS.filter(c=>n(c.code)>0).length;
+  const low = COLORS.filter(c=>status(c.code)).length;
+  $("stats").innerHTML =
+    `<div class="stat"><b>${has}<small style="font-size:.8rem"> / ${COLORS.length}</small></b><span>在庫がある色</span></div>`+
+    `<div class="stat"><b>${total.toLocaleString()}</b><span>合計枚数（約${(total/100).toFixed(1)}袋）</span></div>`+
+    `<div class="stat ${low?'crit':''}"><b>${low}</b><span>少ない・なし</span></div>`;
+}
+function renderChips(){
+  $("groupChips").innerHTML = ["すべて",...GROUPS].map(g=>`<button class="chip" aria-pressed="${S.group===g}" data-g="${esc(g)}">${esc(g)}</button>`).join("");
+}
+function visible(c){
+  if(S.group!=="すべて" && c.group!==S.group) return false;
+  if(S.q){const q=S.q.toLowerCase(); if(!(c.name.includes(S.q)||c.code.toLowerCase().includes(q))) return false}
+  if(S.filter==="low" && !status(c.code)) return false;
+  if(S.filter==="has" && n(c.code)===0) return false;
+  if(S.filter==="cud" && !c.cud) return false;
+  if(S.filter==="reg" && !regular(c.code)) return false;
+  return true;
+}
+function card(c){
+  const v=n(c.code), st=status(c.code);
+  const pill = st==="zero"?`<span class="pill zero">なし</span>`:st==="low"?`<span class="pill low">少ない</span>`:!regular(c.code)?`<span class="pill off">常設外</span>`:"";
+  const ctrl = S.bulk
+    ? `<div class="step"><input type="number" min="0" step="1" id="bulk-${c.code}" value="${v}" aria-label="${esc(c.name)}の枚数"></div>`
+    : `<div class="step">
+        <button data-d="-10" data-c="${c.code}" aria-label="${esc(c.name)}を10枚使う">−10</button>
+        <button data-d="-1" data-c="${c.code}" aria-label="${esc(c.name)}を1枚使う">−1</button>
+        <button class="plus" data-d="1" data-c="${c.code}" aria-label="${esc(c.name)}を1枚もどす">＋1</button>
+        <button class="plus" data-d="100" data-c="${c.code}" aria-label="${esc(c.name)}を1袋補充">＋1袋</button>
+        <button class="more" data-edit="${c.code}" aria-label="${esc(c.name)}の枚数と目安を直す">…</button></div>`;
+  return `<div class="card ${st} ${regular(c.code)?"":"offc"}"><div class="sw" style="background:${c.hex}"></div><div class="cb">
+    <div class="top"><span class="nm">${esc(c.name)}${c.cud?'<span class="cud" title="カラーユニバーサルデザイン認証色">CUD</span>':''}</span><span class="code">${c.code}</span></div>
+    <div class="qty"><b>${v}</b><span class="unit">枚${v>=100?`（${Math.floor(v/100)}袋＋${v%100}枚）`:""}</span>${pill}</div>
+    ${ctrl}</div></div>`;
+}
+function renderStock(){
+  const html = GROUPS.map(g=>{
+    const list = COLORS.filter(c=>c.group===g && visible(c));
+    if(!list.length) return "";
+    const sum = list.reduce((a,c)=>a+n(c.code),0);
+    return `<h2 class="group">${esc(g)}<small>${list.length}色・${sum}枚</small></h2><div class="grid">${list.map(card).join("")}</div>`;
+  }).join("");
+  $("groups").innerHTML = html || `<p class="empty">条件に合う色がありません。</p>`;
+  $("bulkBar").hidden = !S.bulk;
+  $("bulkBtn").hidden = S.bulk;
+}
+function orderList(){
+  return COLORS.filter(c=>status(c.code)).map(c=>({c, need: Math.max(1, Math.ceil((minOf(c.code)*2 - n(c.code))/100))}));
+}
+function renderOrder(){
+  const list = orderList();
+  $("orderBody").innerHTML = list.length ? list.map(({c,need})=>
+    `<tr><td><span class="dot" style="background:${c.hex}"></span>${esc(c.name)} <span class="code">${c.code}</span></td><td class="num">${n(c.code)}</td><td class="num">${minOf(c.code)}</td><td class="num">${need}袋</td></tr>`).join("")
+    : `<tr><td colspan="4" class="empty">補充が必要な色はありません。</td></tr>`;
+  $("orderText").value = list.length
+    ? "大王製紙 再生色画用紙フレッシュカラー 4ツ切 100枚入\n" + list.map(({c,need})=>`・${c.code} ${c.name}　${need}袋`).join("\n") + `\n計 ${list.reduce((a,x)=>a+x.need,0)}袋`
+    : "";
+}
+function renderLog(){
+  const now=new Date(), months=[];
+  for(let i=0;i<12;i++){ months.push(ym(new Date(now.getFullYear(), now.getMonth()-i, 1))); }
+  $("month").innerHTML = months.map(m=>`<option value="${m}" ${m===S.month?"selected":""}>${m.replace("-","年")}月</option>`).join("");
+  const used = {};
+  S.logs.forEach(e=>{ if(e.k==="step" && e.d<0) used[e.code]=(used[e.code]||0)-e.d });
+  const rank = Object.entries(used).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  $("rankBody").innerHTML = rank.length ? rank.map(([code,v])=>{const c=BY[code]||{name:code,hex:"transparent"};
+    return `<tr><td><span class="dot" style="background:${c.hex}"></span>${esc(c.name)}</td><td class="num">${v}枚</td></tr>`}).join("")
+    : `<tr><td colspan="2" class="empty">この月の使用記録はまだありません。</td></tr>`;
+  const recent = S.logs.slice(0,100);
+  $("logBody").innerHTML = recent.length ? recent.map(e=>{const c=BY[e.code]||{name:e.code,hex:"transparent"};
+    const lbl = e.k==="set" ? `数を直した（${e.d>0?"+"+e.d:e.d}）` : (e.d>0?"+"+e.d:e.d);
+    const sure = S.confirmDel===e.id;
+    return `<tr><td class="num" style="text-align:left">${fmt(e.t)}</td><td><span class="dot" style="background:${c.hex}"></span>${esc(c.name)}</td><td class="num">${lbl}</td><td class="num">${e.a}</td><td><button class="del ${sure?"sure":""}" data-del="${e.id}">${sure?"本当に取り消す":"取り消す"}</button></td></tr>`}).join("")
+    : `<tr><td colspan="5" class="empty">この月の記録はありません。</td></tr>`;
+}
+function render(){
+  renderStats(); renderChips();
+  if(S.tab==="stock") renderStock();
+  if(S.tab==="order") renderOrder();
+  if(S.tab==="log") renderLog();
+  const nt=$("notice");
+  if(S.error){ nt.hidden=false; nt.className="notice ro"; nt.textContent="在庫データを読み込めませんでした。インターネットにつながっているか確かめて、ページを開き直してください。"; }
+  else if(!S.ready){ nt.hidden=false; nt.className="notice"; nt.textContent="在庫データを読み込んでいます…"; }
+  else nt.hidden=true;
+}
+
+/* ---------- 書きこみ ---------- */
+async function run(fn, okMsg){
+  S.busy++;
+  try{ await fn(); if(okMsg) toast(okMsg); }
+  catch(e){ toast("保存できませんでした。通信を確かめて、もう一度ためしてください。"); }
+  finally{ S.busy--; }
+  try{ await loadStock(); if(S.tab==="log") await loadLogs(); }catch(_){}
+  render();
+}
+function change(code, delta){
+  if(!S.ready) return;
+  const before=n(code), after=Math.max(0,before+delta); if(after===before) return;
+  S.stock[code]={...(S.stock[code]||{}), n:after}; render();   // 先に画面を変える
+  run(()=>rpc("change_stock",{p_code:code, p_delta:delta}));
+}
+async function saveBulk(){
+  const changes=[];
+  COLORS.forEach(c=>{const el=$("bulk-"+c.code); if(!el) return; const v=Math.max(0,Math.round(Number(el.value)||0)); if(v!==n(c.code)) changes.push([c.code,v]);});
+  S.bulk=false; render();
+  if(!changes.length){ toast("変更はありませんでした"); return; }
+  run(async()=>{ for(const [code,v] of changes){ await rpc("set_stock",{p_code:code, p_n:v, p_min:null}); } }, changes.length+"色の枚数を保存しました");
+}
+
+/* ---------- 操作 ---------- */
+document.querySelector("nav.tabs").addEventListener("click",async e=>{const b=e.target.closest("button[data-tab]"); if(!b) return;
+  S.tab=b.dataset.tab; document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));
+  ["stock","order","log"].forEach(t=>$("view-"+t).hidden = t!==S.tab); render();
+  if(S.tab==="log"){ try{ await loadLogs(); }catch(_){ S.error=true; } render(); }});
+$("groupChips").addEventListener("click",e=>{const b=e.target.closest("[data-g]"); if(b){S.group=b.dataset.g; render();}});
+$("q").addEventListener("input",e=>{S.q=e.target.value.trim(); renderStock();});
+$("filter").addEventListener("change",e=>{S.filter=e.target.value; renderStock();});
+$("bulkBtn").addEventListener("click",()=>{S.bulk=true; S.filter="all"; $("filter").value="all"; render();});
+$("bulkCancel").addEventListener("click",()=>{S.bulk=false; render();});
+$("bulkSave").addEventListener("click",saveBulk);
+$("groups").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-d]"); if(b){change(b.dataset.c, Number(b.dataset.d)); return;}
+  const m=e.target.closest("button[data-edit]"); if(m) openDlg(m.dataset.edit);
+});
+let dlgCode=null;
+function openDlg(code){dlgCode=code; const c=BY[code];
+  $("dlgTitle").innerHTML=`<span class="dot" style="background:${c.hex};width:20px;height:20px"></span>${esc(c.name)} <span class="code">${c.code}</span>`;
+  $("dlgN").value=n(code); $("dlgMin").value=minOf(code); $("dlg").hidden=false; $("dlgN").focus();}
+$("dlgCancel").addEventListener("click",()=>{$("dlg").hidden=true});
+$("dlg").addEventListener("click",e=>{if(e.target.id==="dlg") $("dlg").hidden=true});
+$("dlgSave").addEventListener("click",()=>{
+  const code=dlgCode, v=Math.max(0,Math.round(Number($("dlgN").value)||0));
+  const mRaw=$("dlgMin").value.trim(); const mn = mRaw==="" ? 0 : Math.max(0,Math.round(Number(mRaw)||0));
+  S.stock[code]={...(S.stock[code]||{}), n:v, min:mn}; $("dlg").hidden=true; render();
+  run(()=>rpc("set_stock",{p_code:code, p_n:v, p_min:mn}), "保存しました");
+});
+$("copyOrder").addEventListener("click",async()=>{const t=$("orderText"); if(!t.value){toast("コピーする内容がありません");return;}
+  try{await navigator.clipboard.writeText(t.value); toast("コピーしました");}catch(_){t.select(); toast("選択しました。Ctrl+C でコピーしてください");}});
+$("month").addEventListener("change",async e=>{S.month=e.target.value; S.confirmDel=null; try{await loadLogs();}catch(_){S.error=true;} renderLog();});
+$("logBody").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-del]"); if(!b) return;
+  const id=Number(b.dataset.del);
+  if(S.confirmDel!==id){ S.confirmDel=id; renderLog(); return; }
+  S.confirmDel=null;
+  run(()=>rpc("undo_log",{p_id:id}), "取り消しました");
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape") $("dlg").hidden=true;});
+
+/* ---------- はじめ ---------- */
+render();
+refresh();
+setInterval(refresh, 15000);                       // 15秒ごとに、ほかの先生の入力を取りこむ
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refresh(); });
+</script>
+</body>
+</html>
