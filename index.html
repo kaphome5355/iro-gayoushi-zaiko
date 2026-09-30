@@ -316,7 +316,7 @@ function render(){
   if(S.tab==="order") renderOrder();
   if(S.tab==="log") renderLog();
   const nt=$("notice");
-  if(S.error){ nt.hidden=false; nt.className="notice ro"; nt.textContent="在庫データを読み込めませんでした。インターネットにつながっているか確かめて、ページを開き直してください。"; }
+  if(S.error){ nt.hidden=false; nt.className="notice ro"; nt.textContent="在庫データを読み込めませんでした。インターネットにつながっているか確かめて、ページを開き直してください。それでも出ないときは、このページの担当の先生に知らせてください。"; }
   else if(!S.ready){ nt.hidden=false; nt.className="notice"; nt.textContent="在庫データを読み込んでいます…"; }
   else nt.hidden=true;
 }

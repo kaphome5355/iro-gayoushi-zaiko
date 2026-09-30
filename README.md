@@ -12,4 +12,5 @@
 |---|---|
 | `index.html` | 画面（これ1つで動きます） |
 | `supabase/schema.sql` | データベースの形（参考） |
+| `.github/workflows/keep-alive.yml` | データベースが止まらないよう、3日ごとに自動で在庫データを読みこむしくみ |
 | `CLAUDE.md` | 引きつぎメモ（しくみと、直すときのルール。Claudeが作業の最初に読みます） |
