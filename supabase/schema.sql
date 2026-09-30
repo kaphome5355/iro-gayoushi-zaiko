@@ -19,3 +19,7 @@ alter table public.logs enable row level security;
 create policy "read stock" on public.stock for select to anon, authenticated using (true);
 create policy "read logs" on public.logs for select to anon, authenticated using (true);
 -- 書きこみは change_stock / set_stock / undo_log の3つの関数からだけ行います。
+
+-- リアルタイム：在庫と記録の変更を、開いている画面にすぐ知らせる
+alter publication supabase_realtime add table public.stock, public.logs;
+alter table public.logs replica identity full;
