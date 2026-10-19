@@ -1,12 +1,13 @@
 # データベース（Supabase 無料プラン）が「7日使われないと止まる」のを防ぐため、
-# 3日ごとに在庫データを1回だけ読みこむ。
+# 毎日1回、生存確認の小さな書きこみ（ping）と、在庫データの読みこみをする。
+# ※2026年10月、読みこみだけでは「使われた」と見なされず休止したため、書きこみを加えた。
 # 読みこみに失敗したとき（すでに止まっているときなど）は、この作業が「失敗」になり、
 # GitHub からリポジトリの持ち主にお知らせメールが届く。
 name: データベースを止めない
 
 on:
   schedule:
-    - cron: "17 21 */3 * *"   # 3日ごと、日本時間の朝6時17分ごろ
+    - cron: "17 21 * * *"     # 毎日、日本時間の朝6時17分ごろ
   workflow_dispatch:           # 手動でも動かせる
 
 permissions:
@@ -14,16 +15,18 @@ permissions:
 
 jobs:
   ping:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - name: 在庫データを1回読みこむ
+      - name: 生存確認の書きこみと、在庫データの読みこみ
         env:
           SB_URL: https://vdexlumqbgtbzerbpjrm.supabase.co
           # 公開してよい鍵（index.html に入っているものと同じ）
           SB_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkZXhsdW1xYmd0YnplcmJwanJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MTA1MzAsImV4cCI6MjEwNjI4NjUzMH0.UsBx4lh1vI1OP-VBDoHmBmwdIpsV4EA39XM_r5e5nd0
         run: |
           for i in 1 2 3; do
-            if curl -fsS --max-time 30 "$SB_URL/rest/v1/stock?select=code&limit=1" \
+            if curl -fsS --max-time 30 -X POST "$SB_URL/rest/v1/rpc/ping" \
+                 -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY" -H "Content-Type: application/json" -d '{}' \
+               && curl -fsS --max-time 30 "$SB_URL/rest/v1/stock?select=code&limit=1" \
                  -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY"; then
               echo; echo "OK: データベースは動いています"; exit 0
             fi
@@ -37,7 +40,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: 月に1回、動いた日を記録する
         run: |
-          if [ "$(date -u +%d)" -le 03 ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "$(date -u +%d)" = "01" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             date -u +"最後に確認した日時（UTC）：%Y-%m-%d %H:%M" > .github/keep-alive.txt
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

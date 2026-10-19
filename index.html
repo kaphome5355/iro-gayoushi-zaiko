@@ -238,7 +238,9 @@ async function refresh(){
 }
 
 /* ---------- 画面 ---------- */
+const hasData = () => Object.keys(S.stock).length > 0;
 function renderStats(){
+  if(!hasData()){ $("stats").innerHTML = `<div class="stat"><b>―</b><span>在庫データを待っています</span></div>`; return; }
   const total = COLORS.reduce((a,c)=>a+n(c.code),0);
   const has = COLORS.filter(c=>n(c.code)>0).length;
   const low = COLORS.filter(c=>status(c.code)).length;
@@ -276,6 +278,12 @@ function card(c){
     ${ctrl}</div></div>`;
 }
 function renderStock(){
+  if(!hasData()){
+    $("groups").innerHTML = S.error
+      ? `<p class="empty">在庫データを読み込めていません。<b>データは消えていません。</b>データの保存場所が休んでいるか、通信がつながっていない状態です。少し待ってからページを開き直してください。直らないときは、このページの担当の先生に知らせてください。</p>`
+      : `<p class="empty">在庫データを読み込んでいます…</p>`;
+    $("bulkBar").hidden = true; $("bulkBtn").hidden = true; return;
+  }
   const html = GROUPS.map(g=>{
     const list = COLORS.filter(c=>c.group===g && visible(c));
     if(!list.length) return "";
@@ -290,6 +298,7 @@ function orderList(){
   return COLORS.filter(c=>status(c.code)).map(c=>({c, need: Math.max(1, Math.ceil((minOf(c.code)*2 - n(c.code))/100))}));
 }
 function renderOrder(){
+  if(!hasData()){ $("orderBody").innerHTML = `<tr><td colspan="4" class="empty">在庫データを読み込めていないため、発注リストを作れません。</td></tr>`; $("orderText").value=""; return; }
   const list = orderList();
   $("orderBody").innerHTML = list.length ? list.map(({c,need})=>
     `<tr><td><span class="dot" style="background:${c.hex}"></span>${esc(c.name)} <span class="code">${c.code}</span></td><td class="num">${n(c.code)}</td><td class="num">${minOf(c.code)}</td><td class="num">${need}袋</td></tr>`).join("")
@@ -321,7 +330,7 @@ function render(){
   if(S.tab==="order") renderOrder();
   if(S.tab==="log") renderLog();
   const nt=$("notice");
-  if(S.error){ nt.hidden=false; nt.className="notice ro"; nt.textContent="在庫データを読み込めませんでした。インターネットにつながっているか確かめて、ページを開き直してください。それでも出ないときは、このページの担当の先生に知らせてください。"; }
+  if(S.error){ nt.hidden=false; nt.className="notice ro"; nt.textContent = hasData() ? "最新の在庫データを読み込めませんでした。表示しているのは少し前の数です。少し待ってからページを開き直してください。" : "在庫データを読み込めませんでした（データは消えていません）。少し待ってからページを開き直し、それでも出ないときは、このページの担当の先生に知らせてください。"; }
   else if(!S.ready){ nt.hidden=false; nt.className="notice"; nt.textContent="在庫データを読み込んでいます…"; }
   else nt.hidden=true;
 }

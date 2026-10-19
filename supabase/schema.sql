@@ -23,3 +23,15 @@ create policy "read logs" on public.logs for select to anon, authenticated using
 -- リアルタイム：在庫と記録の変更を、開いている画面にすぐ知らせる
 alter publication supabase_realtime add table public.stock, public.logs;
 alter table public.logs replica identity full;
+
+-- 休止を防ぐ生存確認（毎日 GitHub Actions が ping() を呼ぶ）
+create table if not exists public.heartbeat (
+  id integer primary key default 1 check (id = 1),
+  at timestamptz not null default now(),
+  count bigint not null default 0
+);
+alter table public.heartbeat enable row level security;
+create policy "read heartbeat" on public.heartbeat for select to anon, authenticated using (true);
+create or replace function public.ping() returns timestamptz language sql security definer set search_path = public as $$
+  update heartbeat set at = now(), count = count + 1 where id = 1 returning at;
+$$;
